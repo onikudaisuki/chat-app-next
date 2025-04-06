@@ -6,6 +6,13 @@ const openaiApiKey = process.env.OPENAI_API_KEY!
 const supabaseUrl = process.env.SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
+// ✅ 環境変数チェックログ
+console.log('[chat.ts] ENV:', {
+  openaiApiKey: !!openaiApiKey,
+  supabaseUrl,
+  supabaseServiceKey: supabaseServiceKey?.slice(0, 6) + '***'
+})
+
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -21,6 +28,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    console.log('[chat.ts] Requesting OpenAI:', { message, model })
+
     const gptRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -33,14 +42,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     })
 
-    const gptData = await gptRes.json()
+    const text = await gptRes.text()
+
+    let gptData: any
+    try {
+      gptData = JSON.parse(text)
+    } catch (e) {
+      console.error('[chat.ts] Failed to parse OpenAI response:', text)
+      return res.status(500).json({ error: 'Invalid OpenAI response' })
+    }
 
     if (!gptRes.ok || !gptData.choices) {
-      console.error('OpenAI API error:', gptData)
+      console.error('[chat.ts] OpenAI API error:', gptData)
       return res.status(500).json({ error: 'OpenAI API error' })
     }
 
     const reply = gptData.choices[0].message.content.trim()
+    console.log('[chat.ts] GPT reply:', reply)
 
     const { error: insertError } = await supabase.from('messages').insert([
       { role: 'user', message, model, user_id },
@@ -48,7 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ])
 
     if (insertError) {
-      console.error('Supabase insert error:', insertError)
+      console.error('[chat.ts] Supabase insert error:', insertError)
       return res.status(500).json({ error: 'Failed to save messages' })
     }
 
@@ -56,7 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   } catch (err: unknown) {
     const error = err instanceof Error ? err.message : String(err)
-    console.error('Unexpected server error:', error)
+    console.error('[chat.ts] Unexpected server error:', error)
     return res.status(500).json({ error: 'Internal server error' })
   }
 }

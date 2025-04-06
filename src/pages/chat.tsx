@@ -25,26 +25,50 @@ export default function ChatPage() {
     setMessages(newMessages)
     setMessage('')
 
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, model, user_id: user.id })
-    })
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, model, user_id: user.id })
+      });
 
-    const data = await res.json()
-    setMessages([...newMessages, { role: 'bot', message: data.reply || 'エラーです' }])
+      if (!res.ok) {
+        const text = await res.text();
+        console.error('API error:', text);
+        throw new Error(`HTTP ${res.status}: ${text}`);
+      }
+
+      const data = await res.json();
+      setMessages([...newMessages, { role: 'bot', message: data.reply || 'エラーです' }]);
+    } catch (err) {
+      console.error('fetch error:', err);
+      setMessages([...newMessages, { role: 'bot', message: 'サーバーエラーが発生しました。' }]);
+    }
   }
 
   return (
     <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
       <h1>Chat with GPT 🤖</h1>
+
       <div style={{ marginBottom: '1rem' }}>
         <label>
-          <input type="radio" value="gpt-3.5-turbo" checked={model === 'gpt-3.5-turbo'} onChange={() => setModel('gpt-3.5-turbo')} />
+          <input
+            type="radio"
+            name="model"
+            value="gpt-3.5-turbo"
+            checked={model === 'gpt-3.5-turbo'}
+            onChange={() => setModel('gpt-3.5-turbo')}
+          />
           GPT-3.5
         </label>
         <label style={{ marginLeft: '1rem' }}>
-          <input type="radio" value="gpt-4" checked={model === 'gpt-4'} onChange={() => setModel('gpt-4')} />
+          <input
+            type="radio"
+            name="model"
+            value="gpt-4"
+            checked={model === 'gpt-4'}
+            onChange={() => setModel('gpt-4')}
+          />
           GPT-4
         </label>
       </div>
