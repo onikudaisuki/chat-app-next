@@ -21,7 +21,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // OpenAI リクエスト
     const gptRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -43,7 +42,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const reply = gptData.choices[0].message.content.trim()
 
-    // Supabase への保存
     const { error: insertError } = await supabase.from('messages').insert([
       { role: 'user', message, model, user_id },
       { role: 'bot', message: reply, model, user_id }
@@ -55,10 +53,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     return res.status(200).json({ reply })
-// 修正後（安全なTypeScript対応）
-} catch (err: unknown) {
+
+  } catch (err: unknown) {
     const error = err instanceof Error ? err.message : String(err)
     console.error('Unexpected server error:', error)
     return res.status(500).json({ error: 'Internal server error' })
   }
-  
+}
