@@ -26,23 +26,23 @@ export default function ChatPage() {
     setMessage('')
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch('/api/chat-api', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, model, user_id: user.id })
-      });
+      })
 
       if (!res.ok) {
-        const text = await res.text();
-        console.error('API error:', text);
-        throw new Error(`HTTP ${res.status}: ${text}`);
+        const text = await res.text()
+        console.error('API error:', text)
+        throw new Error(`HTTP ${res.status}: ${text}`)
       }
 
-      const data = await res.json();
-      setMessages([...newMessages, { role: 'bot', message: data.reply || 'エラーです' }]);
+      const data = await res.json()
+      setMessages([...newMessages, { role: 'bot', message: data.reply || 'エラーです' }])
     } catch (err) {
-      console.error('fetch error:', err);
-      setMessages([...newMessages, { role: 'bot', message: 'サーバーエラーが発生しました。' }]);
+      console.error('fetch error:', err)
+      setMessages([...newMessages, { role: 'bot', message: 'サーバーエラーが発生しました。' }])
     }
   }
 
