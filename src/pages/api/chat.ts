@@ -55,8 +55,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     return res.status(200).json({ reply })
-  } catch (err: any) {
-    console.error('Unexpected server error:', err?.message || err)
+// 修正後（安全なTypeScript対応）
+} catch (err: unknown) {
+    const error = err instanceof Error ? err.message : String(err)
+    console.error('Unexpected server error:', error)
     return res.status(500).json({ error: 'Internal server error' })
   }
-}
+  
