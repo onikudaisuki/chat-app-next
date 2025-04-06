@@ -28,17 +28,22 @@ export default function ChatPage() {
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({ message, model, user_id: user.id })
       })
 
+      const rawText = await res.text()
+      console.log('[DEBUG] Raw response:', rawText)
+
       if (!res.ok) {
-        const text = await res.text()
-        console.error('API error:', text)
-        throw new Error(`HTTP ${res.status}: ${text}`)
+        console.error('API error:', rawText)
+        throw new Error(`HTTP ${res.status}: ${rawText}`)
       }
 
-      const data = await res.json()
+      const data = JSON.parse(rawText)
       setMessages([...newMessages, { role: 'bot', message: data.reply || 'エラーです' }])
     } catch (err) {
       console.error('fetch error:', err)
