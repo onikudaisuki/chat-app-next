@@ -1,4 +1,4 @@
-// src/pages/api/chat.ts
+// src/pages/api/chat-api.ts
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 
@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    console.log('[chat.ts] Requesting OpenAI with:', { message, model })
+    console.log('[chat-api.ts] Requesting OpenAI with:', { message, model })
 
     const gptRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       gptData = JSON.parse(text)
     } catch {
-      console.error('[chat.ts] Failed to parse OpenAI response:', text)
+      console.error('[chat-api.ts] Failed to parse OpenAI response:', text)
       return res.status(500).json({ error: 'Invalid OpenAI response' })
     }
 
@@ -51,12 +51,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       !('choices' in gptData) ||
       !Array.isArray((gptData as { choices?: unknown }).choices)
     ) {
-      console.error('[chat.ts] OpenAI API error structure:', gptData)
+      console.error('[chat-api.ts] OpenAI API error structure:', gptData)
       return res.status(500).json({ error: 'OpenAI API format error' })
     }
 
     const reply = ((gptData as { choices: { message: { content: string } }[] }).choices[0].message.content || '').trim()
-    console.log('[chat.ts] GPT reply:', reply)
+    console.log('[chat-api.ts] GPT reply:', reply)
 
     const { error: insertError } = await supabase.from('messages').insert([
       { role: 'user', message, model, user_id },
@@ -64,14 +64,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ])
 
     if (insertError) {
-      console.error('[chat.ts] Supabase insert error:', insertError)
+      console.error('[chat-api.ts] Supabase insert error:', insertError)
       return res.status(500).json({ error: 'Failed to save messages' })
     }
 
     return res.status(200).json({ reply })
   } catch (err: unknown) {
     const error = err instanceof Error ? err.message : String(err)
-    console.error('[chat.ts] Unexpected server error:', error)
+    console.error('[chat-api.ts] Unexpected server error:', error)
     return res.status(500).json({ error: 'Internal server error' })
   }
 }
