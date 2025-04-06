@@ -37,10 +37,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const text = await gptRes.text()
 
-    let gptData: unknown
+    let gptData: any
     try {
       gptData = JSON.parse(text)
-    } catch {
+    } catch (parseError) {
       console.error('[chat.ts] Failed to parse OpenAI response:', text)
       return res.status(500).json({ error: 'Invalid OpenAI response' })
     }
@@ -49,13 +49,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       typeof gptData !== 'object' ||
       !gptData ||
       !('choices' in gptData) ||
-      !Array.isArray((gptData as any).choices)
+      !Array.isArray(gptData.choices)
     ) {
       console.error('[chat.ts] OpenAI API error structure:', gptData)
       return res.status(500).json({ error: 'OpenAI API format error' })
     }
 
-    const reply = (gptData as any).choices[0].message.content.trim()
+    const reply = gptData.choices[0].message.content.trim()
     console.log('[chat.ts] GPT reply:', reply)
 
     const { error: insertError } = await supabase.from('messages').insert([
