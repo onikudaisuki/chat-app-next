@@ -14,7 +14,7 @@ export default function LoginPage() {
     if (error) {
       setError(error.message)
     } else {
-      router.push('/chat') // ログイン成功 → チャットページへ
+      router.push('/chat') // ログイン成功 → チャットページへ進む
     }
   }
 
