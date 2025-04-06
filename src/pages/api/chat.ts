@@ -9,7 +9,6 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // ✅ 405 対応：POSTメソッド以外は拒否
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST'])
     return res.status(405).json({ error: 'Method Not Allowed' })
@@ -17,12 +16,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { message, model = 'gpt-3.5-turbo', user_id } = req.body
 
-  if (!message) {
-    return res.status(400).json({ error: 'Message is required' })
+  if (!message || !user_id) {
+    return res.status(400).json({ error: 'Missing required fields' })
   }
 
   try {
-    // ✅ OpenAI 呼び出し
+    // OpenAI リクエスト
     const gptRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -37,14 +36,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const gptData = await gptRes.json()
 
-    if (!gptRes.ok) {
+    if (!gptRes.ok || !gptData.choices) {
       console.error('OpenAI API error:', gptData)
       return res.status(500).json({ error: 'OpenAI API error' })
     }
 
-    const reply = gptData.choices?.[0]?.message?.content?.trim() || 'No response from OpenAI'
+    const reply = gptData.choices[0].message.content.trim()
 
-    // ✅ Supabase にログ保存
+    // Supabase への保存
     const { error: insertError } = await supabase.from('messages').insert([
       { role: 'user', message, model, user_id },
       { role: 'bot', message: reply, model, user_id }
@@ -56,8 +55,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     return res.status(200).json({ reply })
-  } catch (err) {
-    console.error('API error:', err)
+  } catch (err: any) {
+    console.error('Unexpected server error:', err?.message || err)
     return res.status(500).json({ error: 'Internal server error' })
   }
 }
