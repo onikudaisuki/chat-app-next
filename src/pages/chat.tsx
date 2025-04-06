@@ -18,7 +18,7 @@ export default function ChatPage() {
   }, [router])
 
   const handleSend = async () => {
-    const user = (await supabase.auth.getUser()).data.user
+    const { data: { user } } = await supabase.auth.getUser()
     if (!message.trim() || !user) return
 
     const newMessages = [...messages, { role: 'user', message }]
@@ -30,34 +30,21 @@ export default function ChatPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, model, user_id: user.id })
     })
-    const data = await res.json()
 
+    const data = await res.json()
     setMessages([...newMessages, { role: 'bot', message: data.reply || 'エラーです' }])
   }
 
   return (
     <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
       <h1>Chat with GPT 🤖</h1>
-
       <div style={{ marginBottom: '1rem' }}>
         <label>
-          <input
-            type="radio"
-            name="model"
-            value="gpt-3.5-turbo"
-            checked={model === 'gpt-3.5-turbo'}
-            onChange={() => setModel('gpt-3.5-turbo')}
-          />
+          <input type="radio" value="gpt-3.5-turbo" checked={model === 'gpt-3.5-turbo'} onChange={() => setModel('gpt-3.5-turbo')} />
           GPT-3.5
         </label>
         <label style={{ marginLeft: '1rem' }}>
-          <input
-            type="radio"
-            name="model"
-            value="gpt-4"
-            checked={model === 'gpt-4'}
-            onChange={() => setModel('gpt-4')}
-          />
+          <input type="radio" value="gpt-4" checked={model === 'gpt-4'} onChange={() => setModel('gpt-4')} />
           GPT-4
         </label>
       </div>
