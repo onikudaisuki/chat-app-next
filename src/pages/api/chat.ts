@@ -6,13 +6,6 @@ const openaiApiKey = process.env.OPENAI_API_KEY!
 const supabaseUrl = process.env.SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-// ✅ 環境変数チェックログ
-console.log('[chat.ts] ENV:', {
-  openaiApiKey: !!openaiApiKey,
-  supabaseUrl,
-  supabaseServiceKey: supabaseServiceKey?.slice(0, 6) + '***'
-})
-
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -28,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    console.log('[chat.ts] Requesting OpenAI:', { message, model })
+    console.log('[chat.ts] Requesting OpenAI with:', { message, model })
 
     const gptRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -44,20 +37,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const text = await gptRes.text()
 
-    let gptData: any
+    let gptData: unknown
     try {
       gptData = JSON.parse(text)
-    } catch (e) {
+    } catch {
       console.error('[chat.ts] Failed to parse OpenAI response:', text)
       return res.status(500).json({ error: 'Invalid OpenAI response' })
     }
 
-    if (!gptRes.ok || !gptData.choices) {
-      console.error('[chat.ts] OpenAI API error:', gptData)
-      return res.status(500).json({ error: 'OpenAI API error' })
+    if (
+      typeof gptData !== 'object' ||
+      !gptData ||
+      !('choices' in gptData) ||
+      !Array.isArray((gptData as any).choices)
+    ) {
+      console.error('[chat.ts] OpenAI API error structure:', gptData)
+      return res.status(500).json({ error: 'OpenAI API format error' })
     }
 
-    const reply = gptData.choices[0].message.content.trim()
+    const reply = (gptData as any).choices[0].message.content.trim()
     console.log('[chat.ts] GPT reply:', reply)
 
     const { error: insertError } = await supabase.from('messages').insert([
@@ -71,7 +69,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     return res.status(200).json({ reply })
-
   } catch (err: unknown) {
     const error = err instanceof Error ? err.message : String(err)
     console.error('[chat.ts] Unexpected server error:', error)
